@@ -49,12 +49,15 @@ def send_telegram_alert(message):
 
 def get_price():
     url = f"{API_BASE}/sapi/v2/ticker"
+    params = {"symbol": SYMBOL}
     try:
-        resp = requests.get(url, params={"symbol": SYMBOL})
+        resp = requests.get(url, params=params)
         data = resp.json()
-        if "price" in data:
-            price = float(data["price"])
-            send_telegram_alert(f"📈 *{SYMBOL} Price Update:* `{price}`")
+
+        # Extract 'last' price from response
+        if 'last' in data:
+            price = float(data['last'])
+            send_telegram_alert(f"📊 *{SYMBOL} Price Update:* `{price}`")
             return price
         else:
             logging.warning(f"Unexpected price response: {data}")
