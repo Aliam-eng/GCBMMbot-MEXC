@@ -65,7 +65,7 @@ def get_price():
 def get_balance(asset):
     url = f"{API_BASE}/sapi/v1/account"
     params = {
-        "timestamp": int(time.time() * 1000)
+        "X-CH-TS": int(time.time() * 1000)
     }
     params["signature"] = sign(params)
     headers = {"X-CH-APIKEY": API_KEY}
