@@ -26,9 +26,11 @@ TELEGRAM_USER_IDS = os.getenv('TELEGRAM_USER_IDS').split(',')
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s')
 
 
-def sign(params):
+def sign(params, secret):
     query = '&'.join(f"{k}={params[k]}" for k in sorted(params))
-    return hmac.new(API_SECRET.encode(), query.encode(), hashlib.sha256).hexdigest()
+    hash_bytes = hmac.new(secret.encode(), query.encode(), hashlib.sha256).digest()
+    signature = hash_bytes.hex()
+    return signature
 
 
 def send_telegram_alert(message):
