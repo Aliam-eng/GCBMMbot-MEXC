@@ -135,7 +135,7 @@ def place_order(side, price):
 def cancel_all_orders():
     timestamp = str(int(time.time() * 1000))
     method = "GET"
-    request_path = "/sapi/v2/openOrders"
+    request_path = "/sapi/v2/cancel"
     signature = sign(timestamp, method, request_path)
 
     headers = {
