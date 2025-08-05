@@ -46,7 +46,7 @@ def send_telegram_alert(message):
 
 
 def get_price():
-    url = f"{API_BASE}/sapi/v2/ticker"
+    url = f"{API_BASE}/api/v3/ticker/price"
     try:
         resp = requests.get(url, params={"symbol": SYMBOL})
         data = resp.json()
@@ -63,12 +63,12 @@ def get_price():
 
 
 def get_balance(asset):
-    url = f"{API_BASE}/sapi/v1/account"
+    url = f"{API_BASE}/api/v3/account"
     params = {
         "timestamp": int(time.time() * 1000)
     }
     params["signature"] = sign(params)
-    headers = {"X-CH-APIKEY": API_KEY}
+    headers = {"X-MEXC-APIKEY": API_KEY}
 
     try:
         resp = requests.get(url, headers=headers, params=params)
@@ -86,7 +86,7 @@ def get_balance(asset):
 
 
 def place_order(side, price):
-    url = f"{API_BASE}/sapi/v2/order"
+    url = f"{API_BASE}/api/v3/order"
     params = {
         "symbol": SYMBOL,
         "side": side,
@@ -97,7 +97,7 @@ def place_order(side, price):
         "timestamp": int(time.time() * 1000)
     }
     params["signature"] = sign(params)
-    headers = {"X-CH-APIKEY": API_KEY}
+    headers = {"X-MEXC-APIKEY": API_KEY}
     try:
         resp = requests.post(url, headers=headers, params=params)
         data = resp.json()
@@ -110,13 +110,13 @@ def place_order(side, price):
 
 
 def cancel_all_orders():
-    url = f"{API_BASE}/sapi/v2/openOrders"
+    url = f"{API_BASE}/api/v3/openOrders"
     params = {
         "symbol": SYMBOL,
         "timestamp": int(time.time() * 1000)
     }
     params["signature"] = sign(params)
-    headers = {"X-CH-APIKEY": API_KEY}
+    headers = {"X-MEXC-APIKEY": API_KEY}
 
     try:
         resp = requests.get(url, headers=headers, params=params)
@@ -136,7 +136,7 @@ def cancel_all_orders():
                 "timestamp": int(time.time() * 1000)
             }
             cancel_params["signature"] = sign(cancel_params)
-            cancel_url = f"{API_BASE}/sapi/v2/order"
+            cancel_url = f"{API_BASE}/api/v3/order"
             requests.delete(cancel_url, headers=headers, params=cancel_params)
             logging.info(f"Cancelled Order {order['orderId']} [{order['side']}]")
 
