@@ -46,7 +46,7 @@ def send_telegram_alert(message):
 
 
 def get_price():
-    url = f"{API_BASE}/ticker/price"
+    url = f"{API_BASE}/sapi/v2/ticker"
     try:
         resp = requests.get(url, params={"symbol": SYMBOL})
         data = resp.json()
@@ -63,7 +63,7 @@ def get_price():
 
 
 def get_balance(asset):
-    url = f"{API_BASE}/account"
+    url = f"{API_BASE}/sapi/v1/account"
     params = {
         "timestamp": int(time.time() * 1000)
     }
@@ -86,7 +86,7 @@ def get_balance(asset):
 
 
 def place_order(side, price):
-    url = f"{API_BASE}/order"
+    url = f"{API_BASE}/sapi/v2/order"
     params = {
         "symbol": SYMBOL,
         "side": side,
@@ -110,7 +110,7 @@ def place_order(side, price):
 
 
 def cancel_all_orders():
-    url = f"{API_BASE}/openOrders"
+    url = f"{API_BASE}/sapi/v2/openOrders"
     params = {
         "symbol": SYMBOL,
         "timestamp": int(time.time() * 1000)
@@ -136,7 +136,7 @@ def cancel_all_orders():
                 "timestamp": int(time.time() * 1000)
             }
             cancel_params["signature"] = sign(cancel_params)
-            cancel_url = f"{API_BASE}/order"
+            cancel_url = f"{API_BASE}/sapi/v2/order"
             requests.delete(cancel_url, headers=headers, params=cancel_params)
             logging.info(f"Cancelled Order {order['orderId']} [{order['side']}]")
 
