@@ -86,7 +86,7 @@ def get_balance(asset):
 
 
 def place_order(side, price):
-    url = f"{API_BASE}/api/v3/order"
+    url = f"{API_BASE}/order"
     params = {
         "symbol": SYMBOL,
         "side": side,
@@ -136,7 +136,7 @@ def cancel_all_orders():
                 "timestamp": int(time.time() * 1000)
             }
             cancel_params["signature"] = sign(cancel_params)
-            cancel_url = f"{API_BASE}/api/v3/order"
+            cancel_url = f"{API_BASE}/order"
             requests.delete(cancel_url, headers=headers, params=cancel_params)
             logging.info(f"Cancelled Order {order['orderId']} [{order['side']}]")
 
