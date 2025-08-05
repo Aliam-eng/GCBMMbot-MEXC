@@ -46,7 +46,7 @@ def send_telegram_alert(message):
 
 
 def get_price():
-    url = f"{API_BASE}/api/v3/ticker/price"
+    url = f"{API_BASE}/ticker/price"
     try:
         resp = requests.get(url, params={"symbol": SYMBOL})
         data = resp.json()
@@ -63,12 +63,12 @@ def get_price():
 
 
 def get_balance(asset):
-    url = f"{API_BASE}/api/v3/account"
+    url = f"{API_BASE}/account"
     params = {
         "timestamp": int(time.time() * 1000)
     }
     params["signature"] = sign(params)
-    headers = {"X-MEXC-APIKEY": API_KEY}
+    headers = {"X-MEXC-APIKEY": API_KEY, "X-CH-APIKEY": *}
 
     try:
         resp = requests.get(url, headers=headers, params=params)
@@ -97,7 +97,7 @@ def place_order(side, price):
         "timestamp": int(time.time() * 1000)
     }
     params["signature"] = sign(params)
-    headers = {"X-MEXC-APIKEY": API_KEY}
+    headers = {"X-MEXC-APIKEY": API_KEY, "X-CH-APIKEY": *}
     try:
         resp = requests.post(url, headers=headers, params=params)
         data = resp.json()
@@ -110,13 +110,13 @@ def place_order(side, price):
 
 
 def cancel_all_orders():
-    url = f"{API_BASE}/api/v3/openOrders"
+    url = f"{API_BASE}/openOrders"
     params = {
         "symbol": SYMBOL,
         "timestamp": int(time.time() * 1000)
     }
     params["signature"] = sign(params)
-    headers = {"X-MEXC-APIKEY": API_KEY}
+    headers = {"X-MEXC-APIKEY": API_KEY, "X-CH-APIKEY": *}
 
     try:
         resp = requests.get(url, headers=headers, params=params)
