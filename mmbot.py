@@ -68,7 +68,7 @@ def get_balance(asset):
         "timestamp": int(time.time() * 1000)
     }
     params["signature"] = sign(params)
-    headers = {"X-MEXC-APIKEY": API_KEY, "X-CH-APIKEY": *}
+    headers = {"X-CH-APIKEY": API_KEY, "X-CH-APIKEY": *}
 
     try:
         resp = requests.get(url, headers=headers, params=params)
@@ -97,7 +97,7 @@ def place_order(side, price):
         "timestamp": int(time.time() * 1000)
     }
     params["signature"] = sign(params)
-    headers = {"X-MEXC-APIKEY": API_KEY, "X-CH-APIKEY": *}
+    headers = {"X-CH-APIKEY": API_KEY, "X-CH-APIKEY": *}
     try:
         resp = requests.post(url, headers=headers, params=params)
         data = resp.json()
@@ -116,7 +116,7 @@ def cancel_all_orders():
         "timestamp": int(time.time() * 1000)
     }
     params["signature"] = sign(params)
-    headers = {"X-MEXC-APIKEY": API_KEY, "X-CH-APIKEY": *}
+    headers = {"X-CH-APIKEY": API_KEY, "X-CH-APIKEY": *}
 
     try:
         resp = requests.get(url, headers=headers, params=params)
