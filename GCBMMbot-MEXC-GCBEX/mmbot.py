@@ -67,7 +67,7 @@ def get_balance(asset):
     params = {
         "X-CH-TS": int(time.time() * 1000)
     }
-    params["signature"] = sign(params)
+    params["X-CH-SIGN"] = sign(params)
     headers = {"X-CH-APIKEY": API_KEY}
 
     try:
@@ -96,7 +96,7 @@ def place_order(side, price):
         "price": f"{price:.6f}",
         "timestamp": int(time.time() * 1000)
     }
-    params["signature"] = sign(params)
+    params["X-CH-SIGN"] = sign(params)
     headers = {"X-CH-APIKEY": API_KEY}
     try:
         resp = requests.post(url, headers=headers, params=params)
@@ -115,7 +115,7 @@ def cancel_all_orders():
         "symbol": SYMBOL,
         "timestamp": int(time.time() * 1000)
     }
-    params["signature"] = sign(params)
+    params["X-CH-SIGN"] = sign(params)
     headers = {"X-CH-APIKEY": API_KEY}
 
     try:
@@ -135,7 +135,7 @@ def cancel_all_orders():
                 "orderId": order["orderId"],
                 "timestamp": int(time.time() * 1000)
             }
-            cancel_params["signature"] = sign(cancel_params)
+            cancel_params["X-CH-SIGN"] = sign(cancel_params)
             cancel_url = f"{API_BASE}/sapi/v2/order"
             requests.delete(cancel_url, headers=headers, params=cancel_params)
             logging.info(f"Cancelled Order {order['orderId']} [{order['side']}]")
