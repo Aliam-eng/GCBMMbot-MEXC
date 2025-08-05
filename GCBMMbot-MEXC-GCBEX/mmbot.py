@@ -4,6 +4,7 @@ import hashlib
 import requests
 import logging
 import os
+import json
 from dotenv import load_dotenv
 
 # === LOAD .env CONFIG ===
@@ -26,10 +27,9 @@ TELEGRAM_USER_IDS = os.getenv('TELEGRAM_USER_IDS').split(',')
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s')
 
 
-def sign(params, secret):
-    query = '&'.join(f"{k}={params[k]}" for k in sorted(params))
-    hash_bytes = hmac.new(secret.encode(), query.encode(), hashlib.sha256).digest()
-    signature = hash_bytes.hex()
+def sign(timestamp, method, request_path, body_json=""):
+    message = f"{timestamp}{method.upper()}{request_path}{body_json}"
+    signature = hmac.new(API_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()
     return signature
 
 
@@ -54,7 +54,7 @@ def get_price():
         data = resp.json()
         if "price" in data:
             price = float(data["price"])
-            send_telegram_alert(f"📊 *{SYMBOL} Price Update:* `{price}`")
+            send_telegram_alert(f"📈 *{SYMBOL} Price Update:* `{price}`")
             return price
         else:
             logging.warning(f"Unexpected price response: {data}")
@@ -65,15 +65,21 @@ def get_price():
 
 
 def get_balance(asset):
-    url = f"{API_BASE}/sapi/v1/account"
-    params = {
-        "X-CH-TS": int(time.time() * 1000)
+    timestamp = str(int(time.time() * 1000))
+    method = "GET"
+    request_path = "/sapi/v1/account"
+    signature = sign(timestamp, method, request_path)
+
+    headers = {
+        "X-CH-APIKEY": API_KEY,
+        "X-CH-TS": timestamp,
+        "X-CH-SIGN": signature
     }
-    params["X-CH-SIGN"] = sign(params)
-    headers = {"X-CH-APIKEY": API_KEY}
+
+    url = f"{API_BASE}{request_path}"
 
     try:
-        resp = requests.get(url, headers=headers, params=params)
+        resp = requests.get(url, headers=headers)
         data = resp.json()
 
         if "balances" in data:
@@ -88,20 +94,32 @@ def get_balance(asset):
 
 
 def place_order(side, price):
-    url = f"{API_BASE}/sapi/v2/order"
-    params = {
+    timestamp = str(int(time.time() * 1000))
+    method = "POST"
+    request_path = "/sapi/v2/order"
+
+    body = {
         "symbol": SYMBOL,
         "side": side,
         "type": "LIMIT",
         "timeInForce": "GTC",
         "quantity": ORDER_SIZE,
-        "price": f"{price:.6f}",
-        "timestamp": int(time.time() * 1000)
+        "price": f"{price:.6f}"
     }
-    params["X-CH-SIGN"] = sign(params)
-    headers = {"X-CH-APIKEY": API_KEY}
+
+    body_json = json.dumps(body, separators=(',', ':'))
+    signature = sign(timestamp, method, request_path, body_json)
+
+    headers = {
+        "X-CH-APIKEY": API_KEY,
+        "X-CH-TS": timestamp,
+        "X-CH-SIGN": signature,
+        "Content-Type": "application/json"
+    }
+
+    url = f"{API_BASE}{request_path}"
     try:
-        resp = requests.post(url, headers=headers, params=params)
+        resp = requests.post(url, headers=headers, data=body_json)
         data = resp.json()
         if "orderId" in data:
             logging.info(f"Placed {side} order at {price}")
@@ -112,16 +130,21 @@ def place_order(side, price):
 
 
 def cancel_all_orders():
-    url = f"{API_BASE}/sapi/v2/openOrders"
-    params = {
-        "symbol": SYMBOL,
-        "timestamp": int(time.time() * 1000)
+    timestamp = str(int(time.time() * 1000))
+    method = "GET"
+    request_path = "/sapi/v2/openOrders"
+    signature = sign(timestamp, method, request_path)
+
+    headers = {
+        "X-CH-APIKEY": API_KEY,
+        "X-CH-TS": timestamp,
+        "X-CH-SIGN": signature
     }
-    params["X-CH-SIGN"] = sign(params)
-    headers = {"X-CH-APIKEY": API_KEY}
+
+    url = f"{API_BASE}{request_path}?symbol={SYMBOL}"
 
     try:
-        resp = requests.get(url, headers=headers, params=params)
+        resp = requests.get(url, headers=headers)
         orders = resp.json()
 
         if isinstance(orders, dict) and "code" in orders:
@@ -132,14 +155,25 @@ def cancel_all_orders():
             return
 
         for order in orders:
-            cancel_params = {
+            cancel_timestamp = str(int(time.time() * 1000))
+            cancel_method = "DELETE"
+            cancel_path = "/sapi/v2/order"
+            cancel_body = {
                 "symbol": SYMBOL,
-                "orderId": order["orderId"],
-                "timestamp": int(time.time() * 1000)
+                "orderId": order["orderId"]
             }
-            cancel_params["X-CH-SIGN"] = sign(cancel_params)
-            cancel_url = f"{API_BASE}/sapi/v2/order"
-            requests.delete(cancel_url, headers=headers, params=cancel_params)
+            cancel_body_json = json.dumps(cancel_body, separators=(',', ':'))
+            cancel_signature = sign(cancel_timestamp, cancel_method, cancel_path, cancel_body_json)
+
+            cancel_headers = {
+                "X-CH-APIKEY": API_KEY,
+                "X-CH-TS": cancel_timestamp,
+                "X-CH-SIGN": cancel_signature,
+                "Content-Type": "application/json"
+            }
+
+            cancel_url = f"{API_BASE}{cancel_path}"
+            requests.delete(cancel_url, headers=cancel_headers, data=cancel_body_json)
             logging.info(f"Cancelled Order {order['orderId']} [{order['side']}]")
 
     except Exception as e:
