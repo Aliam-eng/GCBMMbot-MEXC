@@ -24,10 +24,12 @@ TELEGRAM_USER_IDS = os.getenv('TELEGRAM_USER_IDS').split(',')
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s')
 
+
 def sign(timestamp, method, request_path, body_json=""):
     message = f"{timestamp}{method.upper()}{request_path}{body_json}"
     signature = hmac.new(API_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()
     return signature
+
 
 def send_telegram_alert(message):
     for user_id in TELEGRAM_USER_IDS:
@@ -41,6 +43,7 @@ def send_telegram_alert(message):
             requests.post(url, json=payload)
         except Exception as e:
             logging.error(f"Telegram error: {e}")
+
 
 def get_price():
     url = f"{API_BASE}/sapi/v2/ticker"
@@ -58,6 +61,7 @@ def get_price():
     except Exception as e:
         logging.error(f"Price fetch error: {e}")
         return TARGET_PRICE
+
 
 def get_balance(asset):
     timestamp = str(int(time.time() * 1000))
@@ -84,6 +88,7 @@ def get_balance(asset):
     except Exception as e:
         logging.error(f"Balance fetch failed: {e}")
     return 0.0
+
 
 def place_order(side, price):
     timestamp = str(int(time.time() * 1000))
@@ -118,6 +123,7 @@ def place_order(side, price):
     except Exception as e:
         logging.error(f"Error placing {side} order: {e}")
 
+
 def cancel_all_orders():
     try:
         # Step 1: Get open orders
@@ -125,7 +131,9 @@ def cancel_all_orders():
         method = "GET"
         request_path = "/sapi/v2/openOrders"
         query = f"symbol={SYMBOL}"
-        signature = sign(timestamp, method, request_path)
+        full_path_with_query = f"{request_path}?{query}"
+
+        signature = sign(timestamp, method, full_path_with_query)
 
         headers = {
             "X-CH-APIKEY": API_KEY,
@@ -175,6 +183,7 @@ def cancel_all_orders():
     except Exception as e:
         logging.error(f"Error canceling orders: {e}")
 
+
 def main():
     while True:
         try:
@@ -222,6 +231,7 @@ def main():
             logging.error(f"Error in loop: {e}")
             send_telegram_alert(f"❌ Bot Error: {e}")
             time.sleep(10)
+
 
 if __name__ == "__main__":
     main()
