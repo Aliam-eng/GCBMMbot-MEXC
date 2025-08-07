@@ -7,31 +7,26 @@ import os
 import json
 from dotenv import load_dotenv
 
-# === LOAD .env CONFIG ===
 load_dotenv()
 
 API_KEY = os.getenv('API_KEY')
 API_SECRET = os.getenv('API_SECRET')
-
 SYMBOL = os.getenv('SYMBOL')
 TARGET_PRICE = float(os.getenv('TARGET_PRICE'))
 SPREAD_PERCENT = float(os.getenv('SPREAD_PERCENT'))
 ORDER_SIZE = float(os.getenv('ORDER_SIZE'))
 PRICE_FLOOR = float(os.getenv('PRICE_FLOOR'))
 PRICE_CEIL = float(os.getenv('PRICE_CEIL'))
-
 API_BASE = os.getenv('API_BASE')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_USER_IDS = os.getenv('TELEGRAM_USER_IDS').split(',')
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s')
 
-
 def sign(timestamp, method, request_path, body_json=""):
     message = f"{timestamp}{method.upper()}{request_path}{body_json}"
     signature = hmac.new(API_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()
     return signature
-
 
 def send_telegram_alert(message):
     for user_id in TELEGRAM_USER_IDS:
@@ -46,15 +41,12 @@ def send_telegram_alert(message):
         except Exception as e:
             logging.error(f"Telegram error: {e}")
 
-
 def get_price():
     url = f"{API_BASE}/sapi/v2/ticker"
     params = {"symbol": SYMBOL}
     try:
         resp = requests.get(url, params=params)
         data = resp.json()
-
-        # Extract 'last' price from response
         if 'last' in data:
             price = float(data['last'])
             send_telegram_alert(f"📊 *{SYMBOL} Price Update:* `{price}`")
@@ -65,7 +57,6 @@ def get_price():
     except Exception as e:
         logging.error(f"Price fetch error: {e}")
         return TARGET_PRICE
-
 
 def get_balance(asset):
     timestamp = str(int(time.time() * 1000))
@@ -80,11 +71,9 @@ def get_balance(asset):
     }
 
     url = f"{API_BASE}{request_path}"
-
     try:
         resp = requests.get(url, headers=headers)
         data = resp.json()
-
         if "balances" in data:
             for item in data["balances"]:
                 if item["asset"] == asset:
@@ -95,12 +84,10 @@ def get_balance(asset):
         logging.error(f"Balance fetch failed: {e}")
     return 0.0
 
-
 def place_order(side, price):
     timestamp = str(int(time.time() * 1000))
     method = "POST"
     request_path = "/sapi/v2/order"
-
     body = {
         "symbol": SYMBOL,
         "side": side,
@@ -109,7 +96,6 @@ def place_order(side, price):
         "quantity": ORDER_SIZE,
         "price": f"{price:.6f}"
     }
-
     body_json = json.dumps(body, separators=(',', ':'))
     signature = sign(timestamp, method, request_path, body_json)
 
@@ -125,42 +111,43 @@ def place_order(side, price):
         resp = requests.post(url, headers=headers, data=body_json)
         data = resp.json()
         if "orderId" in data:
-            logging.info(f"Placed {side} order at {price}")
+            logging.info(f"✅ Placed {side} order at {price}")
         else:
-            logging.warning(f"Order error: {data}")
+            logging.warning(f"⚠️ Order error: {data}")
     except Exception as e:
         logging.error(f"Error placing {side} order: {e}")
 
-
 def cancel_all_orders():
-    timestamp = str(int(time.time() * 1000))
-    method = "GET"
-    request_path = "/sapi/v2/cancel"
-    signature = sign(timestamp, method, request_path)
-
-    headers = {
-        "X-CH-APIKEY": API_KEY,
-        "X-CH-TS": timestamp,
-        "X-CH-SIGN": signature
-    }
-
-    url = f"{API_BASE}{request_path}?symbol={SYMBOL}"
-
     try:
+        # Step 1: Get Open Orders
+        timestamp = str(int(time.time() * 1000))
+        method = "GET"
+        request_path = "/sapi/v2/openOrders"
+        query = f"symbol={SYMBOL}"
+        signature = sign(timestamp, method, f"{request_path}?{query}")
+
+        headers = {
+            "X-CH-APIKEY": API_KEY,
+            "X-CH-TS": timestamp,
+            "X-CH-SIGN": signature
+        }
+
+        url = f"{API_BASE}{request_path}?{query}"
         resp = requests.get(url, headers=headers)
         orders = resp.json()
 
         if isinstance(orders, dict) and "code" in orders:
-            logging.warning(f"Cancel Orders Error: {orders}")
+            logging.warning(f"Open Orders Error: {orders}")
             return
         if not isinstance(orders, list):
-            logging.warning(f"Unexpected orders response: {orders}")
+            logging.warning(f"Unexpected open orders response: {orders}")
             return
 
+        # Step 2: Cancel Each Order Using POST /sapi/v2/cancel
         for order in orders:
             cancel_timestamp = str(int(time.time() * 1000))
-            cancel_method = "DELETE"
-            cancel_path = "/sapi/v2/order"
+            cancel_method = "POST"
+            cancel_path = "/sapi/v2/cancel"
             cancel_body = {
                 "symbol": SYMBOL,
                 "orderId": order["orderId"]
@@ -176,12 +163,16 @@ def cancel_all_orders():
             }
 
             cancel_url = f"{API_BASE}{cancel_path}"
-            requests.delete(cancel_url, headers=cancel_headers, data=cancel_body_json)
-            logging.info(f"Cancelled Order {order['orderId']} [{order['side']}]")
+            cancel_resp = requests.post(cancel_url, headers=cancel_headers, data=cancel_body_json)
+            cancel_result = cancel_resp.json()
+
+            if "status" in cancel_result and cancel_result["status"] == "CANCELED":
+                logging.info(f"✅ Cancelled Order {order['orderId']}")
+            else:
+                logging.warning(f"⚠️ Failed to cancel {order['orderId']}: {cancel_result}")
 
     except Exception as e:
         logging.error(f"Error canceling orders: {e}")
-
 
 def main():
     while True:
@@ -230,7 +221,6 @@ def main():
             logging.error(f"Error in loop: {e}")
             send_telegram_alert(f"❌ Bot Error: {e}")
             time.sleep(10)
-
 
 if __name__ == "__main__":
     main()
