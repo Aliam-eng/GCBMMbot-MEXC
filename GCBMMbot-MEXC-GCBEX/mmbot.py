@@ -7,6 +7,7 @@ import os
 import json
 from dotenv import load_dotenv
 
+# === LOAD .env CONFIG ===
 load_dotenv()
 
 API_KEY = os.getenv('API_KEY')
@@ -119,12 +120,12 @@ def place_order(side, price):
 
 def cancel_all_orders():
     try:
-        # Step 1: Get Open Orders
+        # Step 1: Get open orders
         timestamp = str(int(time.time() * 1000))
         method = "GET"
         request_path = "/sapi/v2/openOrders"
         query = f"symbol={SYMBOL}"
-        signature = sign(timestamp, method, f"{request_path}?{query}")
+        signature = sign(timestamp, method, request_path)
 
         headers = {
             "X-CH-APIKEY": API_KEY,
@@ -143,7 +144,7 @@ def cancel_all_orders():
             logging.warning(f"Unexpected open orders response: {orders}")
             return
 
-        # Step 2: Cancel Each Order Using POST /sapi/v2/cancel
+        # Step 2: Cancel each order using POST /sapi/v2/cancel
         for order in orders:
             cancel_timestamp = str(int(time.time() * 1000))
             cancel_method = "POST"
