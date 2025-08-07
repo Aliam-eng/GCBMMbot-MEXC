@@ -148,12 +148,19 @@ def cancel_all_orders():
         if isinstance(orders, dict) and "code" in orders:
             logging.warning(f"Open Orders Error: {orders}")
             return
-        if not isinstance(orders, list):
+
+        if isinstance(orders, dict) and "list" in orders:
+            orders_list = orders["list"]
+        else:
             logging.warning(f"Unexpected open orders response: {orders}")
             return
 
+        if not orders_list:
+            logging.info("No open orders to cancel.")
+            return
+
         # Step 2: Cancel each order using POST /sapi/v2/cancel
-        for order in orders:
+        for order in orders_list:
             cancel_timestamp = str(int(time.time() * 1000))
             cancel_method = "POST"
             cancel_path = "/sapi/v2/cancel"
